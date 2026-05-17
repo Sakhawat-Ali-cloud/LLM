@@ -1,0 +1,159 @@
+# =============================================================================
+# LLM Security Gateway – Master Configuration
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Injection Detection
+# ---------------------------------------------------------------------------
+injection_detection:
+  thresholds:
+    medium: 0.30   # score >= this → MEDIUM risk
+    high:   0.60   # score >= this → HIGH risk
+    block:  0.75   # score >= this → BLOCK decision
+
+  # Keyword patterns with weights (higher = more suspicious)
+  keywords:
+    # ── Critical (weight 5) ─────────────────────────────────────────
+    "ignore previous instructions": 5
+    "ignore all prior instructions": 5
+    "disregard previous":           5
+    "disregard all":                5
+    "system prompt":                5
+    "jailbreak":                    5
+
+    # ── High (weight 4) ─────────────────────────────────────────────
+    "you are now":                  4
+    "DAN":                          4
+    "do anything now":              4
+    "developer mode":               4
+    "root access":                  4
+    "admin mode":                   4
+    "new role":                     4
+    "no restrictions":              4
+    "without restrictions":         4
+    "uncensored":                   4
+    "god mode":                     4
+    "sudo":                         4
+
+    # ── Medium (weight 3) ────────────────────────────────────────────
+    "act as":                       3
+    "pretend to be":                3
+    "bypass":                       3
+    "override":                     3
+    "disable":                      3
+    "api key":                      3
+    "secret token":                 3
+    "leak":                         3
+    "confidential":                 3
+
+    # ── Low (weight 2) ──────────────────────────────────────────────
+    "reveal":                       2
+    "extract":                      2
+    "hidden":                       2
+    "internal":                     2
+    "secret":                       2
+    "forget":                       2
+    "override":                     2
+    "turn off":                     2
+    "show me":                      2
+
+# ---------------------------------------------------------------------------
+# Semantic Detection (sentence-transformers)
+# ---------------------------------------------------------------------------
+semantic_detection:
+  enabled: true
+  model_name: "all-MiniLM-L6-v2"   # lightweight 80 MB model
+  threshold: 0.60                    # cosine similarity to flag as threat
+  top_k: 3                           # top matches to include in response
+  injection_boost_weight: 0.40       # how much semantic score boosts keyword score
+
+# ---------------------------------------------------------------------------
+# Multilingual Support
+# ---------------------------------------------------------------------------
+multilingual:
+  enabled: true
+  target_language: "en"
+  # If langdetect is unavailable, always treat text as English
+  fallback_language: "en"
+
+# ---------------------------------------------------------------------------
+# Preprocessing / Obfuscation Handling
+# ---------------------------------------------------------------------------
+preprocessing:
+  enabled: true
+  fix_leet:       true   # 3→e, @→a …
+  fix_spacing:    true   # "j a i l" → "jail"
+  decode_base64:  true   # inline base64 blob expansion
+  fix_unicode:    true   # fullwidth/homoglyph normalisation
+
+# ---------------------------------------------------------------------------
+# PII Detection
+# ---------------------------------------------------------------------------
+pii_detection:
+  confidence_threshold: 0.50
+  mask_replacement: "[REDACTED]"
+
+  # Custom Presidio pattern recognisers
+  custom_recognizers:
+    api_key:
+      enabled: true
+      patterns:
+        - "sk-[a-zA-Z0-9]{20,}"
+        - "AKIA[0-9A-Z]{16}"
+        - "ghp_[a-zA-Z0-9]{36}"
+        - "Bearer\\s+[a-zA-Z0-9\\-_]{20,}"
+      context_words: ["api", "key", "token", "secret", "auth", "bearer"]
+      confidence_boost: 0.30
+
+    internal_id:
+      enabled: true
+      patterns:
+        - "INT-[0-9]{6,}"
+        - "EMP-[0-9]{5,}"
+        - "ID-[0-9]{8,}"
+      context_words: ["employee", "internal", "id", "identifier"]
+      confidence_boost: 0.20
+
+    pakistan_cnic:
+      enabled: true
+      patterns:
+        - "\\d{5}-\\d{7}-\\d{1}"
+      context_words: ["cnic", "national id", "identity"]
+      confidence_boost: 0.35
+
+# ---------------------------------------------------------------------------
+# Policy Engine
+# ---------------------------------------------------------------------------
+policy_engine:
+  injection_block_threshold: 0.75
+  pii_mask_threshold:        0.50
+  risk_weights:
+    injection: 0.60
+    pii:       0.40
+
+# ---------------------------------------------------------------------------
+# Audit Logging
+# ---------------------------------------------------------------------------
+audit:
+  enabled:      true
+  log_dir:      "audit_logs"
+  max_text_len: 500      # chars stored per record (-1 = unlimited)
+  rotate_daily: true
+
+# ---------------------------------------------------------------------------
+# Metrics
+# ---------------------------------------------------------------------------
+metrics:
+  enabled:               true
+  track_latency:         true
+  track_decisions:       true
+  track_detection_counts: true
+
+# ---------------------------------------------------------------------------
+# API Server
+# ---------------------------------------------------------------------------
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: true
+  log_level: "info"
