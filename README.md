@@ -1,4 +1,4 @@
-# 🛡️ LLM Security Gateway — Final Lab (CSC 262)
+# 🛡️ LLM Security Gateway —
 
 A **robust, modular pre-model security gateway** that protects LLM applications before user input reaches the model. This final-lab system removes the key gaps from the midterm baseline by adding a hybrid detector, multilingual/paraphrase robustness, stronger Presidio customization, auditable policy decisions, and a large reproducible evaluation dataset.
 
